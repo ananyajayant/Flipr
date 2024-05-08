@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Translation App</title>
+  <style>
+    /* Basic styling for dropdowns, buttons, and other elements */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f3f3; /* Light gray background */
+      color: #333; /* Dark text color */
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .dropdown-container {
+      position: relative;
+      width: 200px;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+
+    .selected {
+      padding: 10px;
+      border: 2px solid #3498db; /* Border color */
+      background-color: #fff; /* White background */
+      color: #333; /* Dark text color */
+      border-radius: 5px;
+    }
+
+    .dropdown-list {
+      display: none;
+      position: absolute;
+      top: calc(100% + 5px);
+      left: 0;
+      width: 100%;
+      background-color: #fff; /* White background */
+      border: 2px solid #3498db; /* Border color */
+      border-radius: 5px;
+      z-index: 10;
+    }
+
+    .dropdown-container.active .dropdown-list {
+      display: block;
+    }
+
+    .option {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .option:hover {
+      background-color: #3498db; /* Hover color */
+      color: #fff; /* White text color on hover */
+    }
+
+    #swap-btn {
+      margin: 10px;
+      padding: 10px 20px;
+      background-color: #2ecc71; /* Green button color */
+      color: #fff; /* White text color */
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #swap-btn:hover {
+      background-color: #27ae60; /* Darker green on hover */
+    }
+
+    #dark-mode-btn {
+      margin-right: 10px;
+    }
+
+    .dark {
+      background-color: #333; /* Dark background */
+      color: #fff; /* White text color */
+    }
+
+    #upload-title {
+      display: inline-block;
+      margin-left: 10px;
+    }
+
+    #download-btn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #e74c3c; /* Red button color */
+      color: #fff; /* White text color */
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #download-btn:hover {
+      background-color: #c0392b; /* Darker red on hover */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Language Selection Dropdowns -->
+    <div class="dropdown-container" id="input-language">
+      <div class="selected" data-value="en">English (English)</div>
+      <ul class="dropdown-list"></ul>
+    </div>
+
+    <div class="dropdown-container" id="output-language">
+      <div class="selected" data-value="es">Spanish (Español)</div>
+      <ul class="dropdown-list"></ul>
+    </div>
+
+    <!-- Swap Button -->
+    <button id="swap-btn">Swap</button>
+
+    <!-- Text Areas for Input and Output -->
+    <textarea id="input-text" placeholder="Enter text here..." rows="5"></textarea>
+    <textarea id="output-text" placeholder="Translation will appear here..." readonly rows="5"></textarea>
+
+    <!-- Dark Mode Toggle -->
+    <label>
+      <input type="checkbox" id="dark-mode-btn" /> Dark Mode
+    </label>
+
+    <!-- Upload Document -->
+    <input type="file" id="upload-document" />
+    <span id="upload-title">Upload a document</span>
+
+    <!-- Download Button -->
+    <button id="download-btn">Download Translation</button>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      const languages = [
+        { code: 'en', name: 'English', native: 'English' },
+        { code: 'es', name: 'Spanish', native: 'Español' },
+        { code: 'fr', name: 'French', native: 'Français' },
+        { code: 'de', name: 'German', native: 'Deutsch' },
+        { code: 'zh-CN', name: 'Chinese', native: '中文' }
+        // Add more languages as needed
+      ];
+
+      const inputLanguageDropdown = $("#input-language");
+      const outputLanguageDropdown = $("#output-language");
+      const inputTextElem = $("#input-text");
+      const outputTextElem = $("#output-text");
+
+      populateDropdown(inputLanguageDropdown, languages);
+      populateDropdown(outputLanguageDropdown, languages);
+
+      $(".dropdown-container").on("click", function() {
+        $(this).toggleClass("active");
+      });
+
+      $(".option").on("click", function() {
+        $(this).siblings().removeClass("active");
+        $(this).addClass("active");
+        const selected = $(this).closest(".dropdown-container").find(".selected");
+        selected.text($(this).text());
+        selected.attr("data-value", $(this).attr("data-value"));
+        translate();
+      });
+
+      $("#swap-btn").on("click", function() {
+        const inputLangValue = inputLanguageDropdown.find(".selected").attr("data-value");
+        const outputLangValue = outputLanguageDropdown.find(".selected").attr("data-value");
+        inputLanguageDropdown.find(".selected").text(outputLanguageDropdown.find(".selected").text()).attr("data-value", outputLangValue);
+        outputLanguageDropdown.find(".selected").text(inputLanguageDropdown.find(".selected").text()).attr("data-value", inputLangValue);
+        translate();
+      });
+
+      $("#dark-mode-btn").on("change", function() {
+        $("body").toggleClass("dark");
+      });
+
+      $("#input-text").on("input", function() {
+        translate();
+      });
+
+      function populateDropdown(dropdown, options) {
+        const list = dropdown.find(".dropdown-list");
+        list.empty();
+        options.forEach(option => {
+          const li = $("<li>").addClass("option").text(`${option.name} (${option.native})`).attr("data-value", option.code);
+          list.append(li);
+        });
+      }
+
+      function translate() {
+        const inputText = inputTextElem.val().trim();
+        const inputLanguage = inputLanguageDropdown.find(".selected").attr("data-value");
+        const outputLanguage = outputLanguageDropdown.find(".selected").attr("data-value");
+
+        if (inputText === "") {
+          outputTextElem.val("");
+          return;
+        }
+
+        const apiKey = 'a34d073c7emsh4a81de9cca6bc37p1bda88jsn39ca527faf5d'; // Replace with your RapidAPI key
+
+        $.ajax({
+          url: 'https://google-translate1.p.rapidapi.com/language/translate/v2',
+          type: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept-Encoding': 'application/gzip',
+            'x-rapidapi-host': 'google-translate1.p.rapidapi.com',
+            'x-rapidapi-key': 'a34d073c7emsh4a81de9cca6bc37p1bda88jsn39ca527faf5d'
+          },
+          data: {
+            q: inputText,
+            target: outputLanguage,
+            source: inputLanguage
+          },
+          success: function(response) {
+            if (response.data && response.data.translations && response.data.translations[0]) {
+              outputTextElem.val(response.data.translations[0].translatedText);
+            } else {
+              console.error('Translation failed:', response);
+              outputTextElem.val('Translation failed');
+            }
+          },
+          error: function(xhr, status, error) {
+            console.error('Error during translation:', error);
+            outputTextElem.val('Error during translation');
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
